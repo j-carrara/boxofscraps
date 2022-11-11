@@ -1,0 +1,134 @@
+import discord
+from discord.ext import commands
+
+import asyncio
+import logging
+
+from config import FFMPEG_PATH, FFMPEG_OPTS, DISCORD_TOKEN
+from command_tree import setup 
+from util import search, join, send_message, queue_handler
+
+song_queue = asyncio.Queue()
+queue_lock = asyncio.Lock()
+now_playing = [None]
+
+bot = commands.Bot(command_prefix="=", intents= discord.Intents.all())
+
+@bot.event
+async def on_ready():
+    await setup(bot, play, stop, skip, queue, leave, clear)
+    logging.getLogger('discord.commands').info("Command tree synced.")
+
+@bot.command()
+async def play(ctx, *, query=None, interaction=None):
+    if ctx.channel.name == "bot-commands" or ctx.channel.name == "moderator-only":
+        if ctx.channel.name == "moderator-only":
+            logging.getLogger('discord.commands').info(f"{ctx.message.author}: {query}")
+            await ctx.message.delete()
+
+        voice = discord.utils.get(bot.voice_clients, guild=ctx.guild)
+
+        if query == None:
+            if song_queue.empty():
+                if ctx.channel.name == "bot-commands":
+                    if interaction != None:
+                        await interaction.response.send_message(f"Queue is empty, please input a song.")
+                    else:
+                        await send_message(ctx, interaction, f"Queue is empty, please input a song.")
+                channel = await join(ctx, voice)
+                source = await song_queue.get()
+                now_playing[0] = source[1]
+                channel.play(discord.FFmpegPCMAudio(source[0], **FFMPEG_OPTS, executable=FFMPEG_PATH), after= lambda e: asyncio.run_coroutine_threadsafe(queue_handler(bot, ctx, channel, song_queue, queue_lock, now_playing), bot.loop))
+                if ctx.channel.name == "bot-commands":
+                    await send_message(ctx, interaction, f'Now playing: "{now_playing[0]}".')
+        else:
+            async with queue_lock:
+                if voice and voice.is_connected() and voice.is_playing():
+                    video, source = search(query)
+                    await song_queue.put((source, video['title']))
+                    if ctx.channel.name == "bot-commands":
+                        await send_message(ctx, interaction, f'Queued: "{video["title"]}".')
+
+                elif not song_queue.empty(): 
+                    channel = await join(ctx, voice)
+                    source = await song_queue.get()
+                    now_playing[0] = source[1]
+                    channel.play(discord.FFmpegPCMAudio(source[0], **FFMPEG_OPTS, executable=FFMPEG_PATH), after= lambda e: asyncio.run_coroutine_threadsafe(queue_handler(bot, ctx, channel, song_queue, queue_lock, now_playing), bot.loop))
+                    if ctx.channel.name == "bot-commands":
+                        await send_message(ctx, interaction, f'Now playing: "{now_playing[0]}".')
+                    video, source = search(query)
+                    await song_queue.put((source, video['title']))
+                    if ctx.channel.name == "bot-commands":
+                        await send_message(ctx, interaction, f'Queued: "{video["title"]}".')
+                else:
+                    channel = await join(ctx, voice)
+                    video, source = search(query)
+                    now_playing[0] = video['title']
+                    channel.play(discord.FFmpegPCMAudio(source, **FFMPEG_OPTS, executable=FFMPEG_PATH), after= lambda e: asyncio.run_coroutine_threadsafe(queue_handler(ctx, channel), bot.loop))
+                    if ctx.channel.name == "bot-commands":
+                        await send_message(ctx, interaction, f'Now playing: "{now_playing[0]}".')
+
+@bot.command()
+async def stop(ctx, interaction=None):
+    if ctx.channel.name == "bot-commands":
+        if ctx.guild.voice_client and ctx.guild.voice_client.is_connected() and ctx.guild.voice_client.is_playing():
+            await send_message(ctx, interaction, f'Stopping.')
+            now_playing[0] = None
+            await ctx.guild.voice_client.disconnect()
+        else:
+            await send_message(ctx, interaction, f"I'm not playing anything.")
+
+@bot.command()
+async def leave(ctx, interaction=None):
+    stop(ctx, interaction)
+
+@bot.command()
+async def skip(ctx, interaction=None):
+    if ctx.channel.name == "bot-commands":
+        if ctx.guild.voice_client and ctx.guild.voice_client.is_connected() and ctx.guild.voice_client.is_playing():
+            ctx.guild.voice_client.stop()
+            await send_message(ctx, interaction, f'Skipping: "{now_playing[0]}".')
+        else:
+            await send_message(ctx, interaction, f"I'm not playing anything.")
+
+
+@bot.command()
+async def clear(ctx, interaction=None):
+    if ctx.channel.name == "bot-commands":
+        if song_queue.empty():
+            if ctx.guild.voice_client and ctx.guild.voice_client.is_connected() and ctx.guild.voice_client.is_playing():
+                ctx.guild.voice_client.stop()
+                await send_message(ctx, interaction, "Queue cleared.")
+            else:
+                await send_message(ctx, interaction, "Queue already empty.")
+        else:
+            async with queue_lock:
+                for _ in range(song_queue.qsize()):
+                    await song_queue.get()
+                if ctx.guild.voice_client and ctx.guild.voice_client.is_connected() and ctx.guild.voice_client.is_playing():
+                    ctx.guild.voice_client.stop()
+            
+            await send_message(ctx, interaction, "Queue cleared.")
+    
+@bot.command()
+async def queue(ctx, interaction=None):
+    if ctx.channel.name == "bot-commands":
+        if song_queue.empty():
+            if now_playing[0] != None:
+                await send_message(ctx, interaction, f"1: {now_playing[0]} [NOW PLAYING]")
+            else:
+                await send_message(ctx, interaction, "Queue is empty.")
+        else:
+            async with queue_lock:
+                song_list = []
+                for _ in range(song_queue.qsize()):
+                    song_list.append(await song_queue.get())
+                output = [song[1] for song in song_list]
+                if now_playing[0] != None:
+                    output.insert(0, f"{now_playing[0]} [NOW PLAYING]")
+                output = '\n'.join([f"{i+1}: {v}" for i, v in enumerate(output)])
+                await send_message(ctx, interaction, output)
+                for song in song_list:
+                    await song_queue.put(song)
+
+bot.run(DISCORD_TOKEN)
