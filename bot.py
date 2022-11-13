@@ -16,28 +16,45 @@ bot = commands.Bot(command_prefix="=", intents= discord.Intents.all())
 
 @bot.event
 async def on_ready():
-    await setup(bot, play, stop, skip, queue, leave, clear)
+    await setup(bot, play, stop, skip, queue, leave, clear, feelinglucky, fl)
     logging.getLogger('discord.commands').info("Command tree synced.")
 
 @bot.command()
-async def play(ctx, *, query=None, interaction=None):
+async def play(ctx, query=None, interaction=None, feeling_lucky=False):
     if not (ctx.channel.name == "bot-commands" or ctx.channel.name == "moderator-only"):
         return
 
     voice = discord.utils.get(bot.voice_clients, guild=ctx.guild)
-    response = await song_handler(ctx, query, song_queue, now_playing, voice, queue_lock, bot)
 
+
+    response = await song_handler(ctx, interaction, query, song_queue, now_playing, voice, queue_lock, bot, feeling_lucky)
+
+    
     if ctx.channel.name == "moderator-only":
         logging.getLogger('discord.commands').info(f"{ctx.message.author}: {query}")
         if interaction == None: await ctx.message.delete()
         return
 
-    if response["status"] == -1:
+        
+    if response == -1:
+        return
+    if response == 1:
+        interaction = None
+
+    if query == None and song_queue.empty():
         await send_message(ctx, interaction, f"Queue is empty, please input a song.")
-    elif response["status"] == 0:
+    elif not (voice and voice.is_connected() and voice.is_playing()):
         await send_message(ctx, interaction, f'Now playing: "{now_playing[0]}".')
     else:
         await send_message(ctx, interaction, f'Queued: "{response["title"]}".')
+
+@bot.command()
+async def feelinglucky(ctx, query=None, interaction=None):
+    await play(ctx, query, interaction, feeling_lucky=True)
+
+@bot.command()
+async def fl(ctx, query=None, interaction=None):
+    await play(ctx, query, interaction, feeling_lucky=True)
 
 @bot.command()
 async def stop(ctx, interaction=None):

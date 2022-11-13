@@ -1,15 +1,46 @@
 from youtube_dl import YoutubeDL
+from youtube_search import YoutubeSearch
 import requests
 from config import FFMPEG_OPTS, FFMPEG_PATH
 import asyncio
 import discord
 
-def search(query):
+def check(author):
+    def inner_check(message):
+        if message.author == author:
+            try:
+                number = int(message.content)
+                if number > 0 and number <= 5:
+                    return True
+            except:
+                pass
+        return False
+    return inner_check
+
+async def search(ctx, interaction, bot, query, feeling_lucky=False):
     with YoutubeDL({'format': 'bestaudio', 'noplaylist':'True'}) as ydl:
         try: requests.get(query)
-        except: info = ydl.extract_info(f"ytsearch:{query}", download=False)['entries'][0]
-        else: info = ydl.extract_info(query, download=False)
-    return (info, info['formats'][0]['url'])
+        except: 
+            if feeling_lucky:
+                result = 0
+                response = ydl.extract_info(f"ytsearch:{query}", download=False)['entries']
+                info = response[0]
+            else:
+                result = 1
+                results = YoutubeSearch(query, max_results=10).to_dict()
+                await send_message(ctx, interaction, f"**Choose a video by number:**\n```"+'\n'.join([f'{i+1: >4}: {video["title"]}' for i, video in enumerate(results)])+"```")
+                try:
+                    msg = await bot.wait_for('message', check=check(ctx.author), timeout=15)
+                except:
+                    await send_message(ctx, None, "Timed out.")
+                    return (None, None, -1)
+                selection = int(msg.content)
+                info = ydl.extract_info(f"https://youtube.com{results[selection-1]['url_suffix']}",download=False)
+        else: 
+            result = 0
+            print("here")
+            info = ydl.extract_info(query, download=False)
+    return (info, info['formats'][0]['url'], result)
 
 async def join(ctx, voice):
     if ctx.channel.name == "moderator-only":
@@ -45,12 +76,14 @@ async def queue_handler(bot, ctx, channel, song_queue, queue_lock, now_playing):
                 now_playing[0] = None
                 await ctx.guild.voice_client.disconnect()
 
-async def song_handler(ctx, query, song_queue, now_playing, voice, queue_lock, bot):
+async def song_handler(ctx, interaction, query, song_queue, now_playing, voice, queue_lock, bot, feeling_lucky):
     if query == None and song_queue.empty():
-        return {"status": -1, "title": None} 
+        return True
 
     if query != None:
-        video, source = search(query)
+        video, source, result = await search(ctx, interaction, bot, query, feeling_lucky)
+        if result == -1:
+            return result
         title = video['title']
     else:
         title = None
@@ -69,4 +102,4 @@ async def song_handler(ctx, query, song_queue, now_playing, voice, queue_lock, b
         channel = await join(ctx, voice)
         channel.play(discord.FFmpegPCMAudio(source, **FFMPEG_OPTS, executable=FFMPEG_PATH), after= lambda e: asyncio.run_coroutine_threadsafe(queue_handler(bot, ctx, channel, song_queue, queue_lock, now_playing), bot.loop))
 
-    return {"status": int(not (voice and voice.is_connected() and voice.is_playing())), "title": title} 
+    return result
