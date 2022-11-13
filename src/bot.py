@@ -32,8 +32,9 @@ async def play(ctx, query=None, interaction=None, feeling_lucky=False):
     
     if ctx.channel.name == "moderator-only":
         logging.getLogger('discord.commands').info(f"{ctx.message.author}: {query}")
-        if interaction == None: await ctx.message.delete()
-        return
+        if interaction == None: 
+            await ctx.message.delete()
+            return
 
         
     if response == -1:
