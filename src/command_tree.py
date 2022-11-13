@@ -13,19 +13,19 @@ class BoxOfCommands(commands.Cog):
         self.feelinglucky = feelinglucky
         self.fl = fl
 
-    @app_commands.command(name="play", description="Search or link something in Youtube to play in voice.")
+    @app_commands.command(name="play", description="Search for/link a Youtube video to play in voice.")
     async def app_play(self, interaction: Interaction, search_or_link: str) -> None:
         await self.play(await self.bot.get_context(interaction), query=search_or_link, interaction=interaction)
 
     @app_commands.command(name="feelinglucky", description="Play the first result of a Youtube search in voice.")
-    async def app_feelinglucky(self, interaction: Interaction, search_or_link: str) -> None:
-        await self.feelinglucky(await self.bot.get_context(interaction), query=search_or_link, interaction=interaction)
+    async def app_feelinglucky(self, interaction: Interaction, search: str) -> None:
+        await self.feelinglucky(await self.bot.get_context(interaction), query=search, interaction=interaction)
 
     @app_commands.command(name="fl", description="Play the first result of a Youtube search in voice.")
-    async def app_fl(self, interaction: Interaction, search_or_link: str) -> None:
-        await self.fl(await self.bot.get_context(interaction), query=search_or_link, interaction=interaction)
+    async def app_fl(self, interaction: Interaction, search: str) -> None:
+        await self.fl(await self.bot.get_context(interaction), query=search, interaction=interaction)
     
-    @app_commands.command(name="stop", description="Removes the bot from the channel and ends the current song.")
+    @app_commands.command(name="stop", description="Ends the current song and leaves.")
     async def app_stop(self, interaction: Interaction) -> None:
         await self.stop(await self.bot.get_context(interaction), interaction=interaction)
 
@@ -37,7 +37,7 @@ class BoxOfCommands(commands.Cog):
     async def app_queue(self, interaction: Interaction) -> None:
         await self.queue(await self.bot.get_context(interaction), interaction=interaction)
 
-    @app_commands.command(name="leave", description="Forces the bot to leave a voice channel.")
+    @app_commands.command(name="leave", description="Ends the current song and leaves.")
     async def app_leave(self, interaction: Interaction) -> None:
         await self.leave(await self.bot.get_context(interaction), interaction=interaction)
 
