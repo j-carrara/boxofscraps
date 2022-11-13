@@ -4,9 +4,9 @@ from discord.ext import commands
 import asyncio
 import logging
 
-from config import FFMPEG_PATH, FFMPEG_OPTS, DISCORD_TOKEN
+from config import DISCORD_TOKEN
 from command_tree import setup 
-from util import search, join, send_message, queue_handler
+from util import send_message, song_handler
 
 song_queue = asyncio.Queue()
 queue_lock = asyncio.Lock()
@@ -21,52 +21,23 @@ async def on_ready():
 
 @bot.command()
 async def play(ctx, *, query=None, interaction=None):
-    if ctx.channel.name == "bot-commands" or ctx.channel.name == "moderator-only":
-        if ctx.channel.name == "moderator-only":
-            logging.getLogger('discord.commands').info(f"{ctx.message.author}: {query}")
-            await ctx.message.delete()
+    if not (ctx.channel.name == "bot-commands" or ctx.channel.name == "moderator-only"):
+        return
 
-        voice = discord.utils.get(bot.voice_clients, guild=ctx.guild)
+    voice = discord.utils.get(bot.voice_clients, guild=ctx.guild)
+    response = song_handler(ctx, query, song_queue, now_playing, voice)
 
-        if query == None:
-            if song_queue.empty():
-                if ctx.channel.name == "bot-commands":
-                    if interaction != None:
-                        await interaction.response.send_message(f"Queue is empty, please input a song.")
-                    else:
-                        await send_message(ctx, interaction, f"Queue is empty, please input a song.")
-                channel = await join(ctx, voice)
-                source = await song_queue.get()
-                now_playing[0] = source[1]
-                channel.play(discord.FFmpegPCMAudio(source[0], **FFMPEG_OPTS, executable=FFMPEG_PATH), after= lambda e: asyncio.run_coroutine_threadsafe(queue_handler(bot, ctx, channel, song_queue, queue_lock, now_playing), bot.loop))
-                if ctx.channel.name == "bot-commands":
-                    await send_message(ctx, interaction, f'Now playing: "{now_playing[0]}".')
-        else:
-            async with queue_lock:
-                if voice and voice.is_connected() and voice.is_playing():
-                    video, source = search(query)
-                    await song_queue.put((source, video['title']))
-                    if ctx.channel.name == "bot-commands":
-                        await send_message(ctx, interaction, f'Queued: "{video["title"]}".')
+    if ctx.channel.name == "moderator-only":
+        logging.getLogger('discord.commands').info(f"{ctx.message.author}: {query}")
+        if interaction == None: await ctx.message.delete()
+        return
 
-                elif not song_queue.empty(): 
-                    channel = await join(ctx, voice)
-                    source = await song_queue.get()
-                    now_playing[0] = source[1]
-                    channel.play(discord.FFmpegPCMAudio(source[0], **FFMPEG_OPTS, executable=FFMPEG_PATH), after= lambda e: asyncio.run_coroutine_threadsafe(queue_handler(bot, ctx, channel, song_queue, queue_lock, now_playing), bot.loop))
-                    if ctx.channel.name == "bot-commands":
-                        await send_message(ctx, interaction, f'Now playing: "{now_playing[0]}".')
-                    video, source = search(query)
-                    await song_queue.put((source, video['title']))
-                    if ctx.channel.name == "bot-commands":
-                        await send_message(ctx, interaction, f'Queued: "{video["title"]}".')
-                else:
-                    channel = await join(ctx, voice)
-                    video, source = search(query)
-                    now_playing[0] = video['title']
-                    channel.play(discord.FFmpegPCMAudio(source, **FFMPEG_OPTS, executable=FFMPEG_PATH), after= lambda e: asyncio.run_coroutine_threadsafe(queue_handler(ctx, channel), bot.loop))
-                    if ctx.channel.name == "bot-commands":
-                        await send_message(ctx, interaction, f'Now playing: "{now_playing[0]}".')
+    if response["status"] == -1:
+        await send_message(ctx, interaction, f"Queue is empty, please input a song.")
+    elif response["status"] == 0:
+        await send_message(ctx, interaction, f'Now playing: "{now_playing[0]}".')
+    else:
+        await send_message(ctx, interaction, f'Queued: "{response["title"]}".')
 
 @bot.command()
 async def stop(ctx, interaction=None):

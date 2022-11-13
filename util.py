@@ -2,7 +2,7 @@ from youtube_dl import YoutubeDL
 import requests
 from config import FFMPEG_OPTS, FFMPEG_PATH
 import asyncio
-from discord import FFmpegPCMAudio
+import discord
 
 def search(query):
     with YoutubeDL({'format': 'bestaudio', 'noplaylist':'True'}) as ydl:
@@ -25,7 +25,10 @@ async def join(ctx, voice):
 
 async def send_message(ctx, interaction, message):
     if interaction != None:
-        await interaction.response.send_message(message)
+        if ctx.channel.name == "moderator-only":
+            await interaction.response.send_message(message, ephemeral=True)
+        else:
+            await interaction.response.send_message(message)
     else:
         await ctx.channel.send(message)
 
@@ -37,7 +40,32 @@ async def queue_handler(bot, ctx, channel, song_queue, queue_lock, now_playing):
                 now_playing[0] = source[1]
                 if ctx.channel.name == "bot-commands":
                     await ctx.channel.send(f'Now playing: "{now_playing[0]}".')
-                channel.play(FFmpegPCMAudio(source[0], **FFMPEG_OPTS, executable=FFMPEG_PATH), after=lambda e: asyncio.run_coroutine_threadsafe(queue_handler(bot, ctx, channel, song_queue, queue_lock, now_playing), bot.loop))
+                channel.play(discord.FFmpegPCMAudio(source[0], **FFMPEG_OPTS, executable=FFMPEG_PATH), after=lambda e: asyncio.run_coroutine_threadsafe(queue_handler(bot, ctx, channel, song_queue, queue_lock, now_playing), bot.loop))
             else:
                 now_playing[0] = None
                 await ctx.guild.voice_client.disconnect()
+
+async def song_handler(ctx, query, song_queue, now_playing, voice, queue_lock, bot):
+    if query == None and song_queue.empty():
+        return -1
+
+    if query != None:
+        video, source = search(query)
+        title = video['title']
+    else:
+        title = None
+
+    if not song_queue.empty() or (voice and voice.is_connected() and voice.is_playing()):            
+        await song_queue.put((source, title))
+
+    if not (voice and voice.is_connected() and voice.is_playing()):
+        if song_queue.empty():
+            now_playing[0] = title
+        else:
+            source = await song_queue.get()
+            now_playing[0] = source[1]
+
+        channel = await join(ctx, voice)
+        channel.play(discord.FFmpegPCMAudio(source, **FFMPEG_OPTS, executable=FFMPEG_PATH), after= lambda e: asyncio.run_coroutine_threadsafe(queue_handler(bot, ctx, channel, song_queue, queue_lock, now_playing), bot.loop))
+
+    return {"status": int(not (voice and voice.is_connected() and voice.is_playing())), "title": title} 
