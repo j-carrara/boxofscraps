@@ -41,7 +41,7 @@ class BoxOfCommands(commands.Cog):
     async def app_leave(self, interaction: Interaction) -> None:
         await self.leave(await self.bot.get_context(interaction), interaction=interaction)
 
-    @app_commands.command(name="clear", description="Empties the whole damn song queue.")
+    @app_commands.command(name="clear", description="Empties the song queue.")
     async def app_clear(self, interaction: Interaction) -> None:
         await self.clear(await self.bot.get_context(interaction), interaction=interaction)
 

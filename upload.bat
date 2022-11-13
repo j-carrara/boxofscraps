@@ -1,5 +1,3 @@
-scp -r -i "***REMOVED***" ../Documents/boxofscraps/src ***REMOVED***:~/boxofscraps
-ssh -i "***REMOVED***" ***REMOVED***
-pkill screen
-cd boxofscraps/src
-screen -s bot -dm python3.8 bot.py
+scp -r -i "***REMOVED***" src ***REMOVED***:~/boxofscraps
+ssh -i "***REMOVED***" ***REMOVED*** pkill screen
+ssh -i "***REMOVED***" ***REMOVED*** screen -s bot -dm python3.8 ~/boxofscraps/src/bot.py
