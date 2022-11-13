@@ -47,4 +47,4 @@ class BoxOfCommands(commands.Cog):
 
 async def setup(bot: commands.Bot, play, stop, skip, queue, leave, clear, feelinglucky, fl) -> None:
   await bot.add_cog(BoxOfCommands(bot, play, stop, skip, queue, leave, clear, feelinglucky, fl))
-#   await bot.tree.sync()
+  await bot.tree.sync()
