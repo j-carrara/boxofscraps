@@ -25,7 +25,7 @@ async def play(ctx, *, query=None, interaction=None):
         return
 
     voice = discord.utils.get(bot.voice_clients, guild=ctx.guild)
-    response = song_handler(ctx, query, song_queue, now_playing, voice)
+    response = await song_handler(ctx, query, song_queue, now_playing, voice, queue_lock, bot)
 
     if ctx.channel.name == "moderator-only":
         logging.getLogger('discord.commands').info(f"{ctx.message.author}: {query}")
