@@ -20,7 +20,7 @@ async def on_ready():
     logging.getLogger('discord.commands').info("Command tree synced.")
 
 @bot.command()
-async def play(ctx, query=None, interaction=None, feeling_lucky=False):
+async def play(ctx, *, query=None, interaction=None, feeling_lucky=False):
     if not (ctx.channel.name == "bot-commands" or ctx.channel.name == "moderator-only"):
         return
 
@@ -29,14 +29,13 @@ async def play(ctx, query=None, interaction=None, feeling_lucky=False):
 
     response = await song_handler(ctx, interaction, query, song_queue, now_playing, voice, queue_lock, bot, feeling_lucky)
 
-    
+
     if ctx.channel.name == "moderator-only":
         logging.getLogger('discord.commands').info(f"{ctx.message.author}: {query}")
         if interaction == None: 
             await ctx.message.delete()
             return
 
-        
     if response == -1:
         return
     if response == 1:
@@ -50,12 +49,12 @@ async def play(ctx, query=None, interaction=None, feeling_lucky=False):
         await send_message(ctx, interaction, f'Queued: "{response["title"]}".')
 
 @bot.command()
-async def feelinglucky(ctx, query=None, interaction=None):
-    await play(ctx, query, interaction, feeling_lucky=True)
+async def feelinglucky(ctx, *, query=None, interaction=None):
+    await play(ctx, query=query, interaction=interaction, feeling_lucky=True)
 
 @bot.command()
-async def fl(ctx, query=None, interaction=None):
-    await play(ctx, query, interaction, feeling_lucky=True)
+async def fl(ctx, *, query=None, interaction=None):
+    await play(ctx, query=query, interaction=interaction, feeling_lucky=True)
 
 @bot.command()
 async def stop(ctx, interaction=None):

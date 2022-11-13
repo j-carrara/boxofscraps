@@ -38,7 +38,6 @@ async def search(ctx, interaction, bot, query, feeling_lucky=False):
                 info = ydl.extract_info(f"https://youtube.com{results[selection-1]['url_suffix']}",download=False)
         else: 
             result = 0
-            print("here")
             info = ydl.extract_info(query, download=False)
     return (info, info['formats'][0]['url'], result)
 
