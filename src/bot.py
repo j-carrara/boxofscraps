@@ -4,7 +4,7 @@ from discord.ext import commands
 import asyncio
 import logging
 
-from config import DISCORD_TOKEN
+from config import DISCORD_TOKEN, CHANNEL
 from util import send_message, play_handler
 
 song_queue = asyncio.Queue()
@@ -33,7 +33,7 @@ async def fl(ctx, *, query):
 @bot.hybrid_command(name="stop", with_app_command=True)
 async def stop(ctx):
     interaction = ctx.interaction
-    if ctx.channel.name == "bot-commands":
+    if ctx.channel.name == CHANNEL:
         if ctx.guild.voice_client and ctx.guild.voice_client.is_connected() and ctx.guild.voice_client.is_playing():
             await send_message(ctx, interaction, f'Stopping.')
             now_playing[0] = None
@@ -48,7 +48,7 @@ async def leave(ctx):
 @bot.hybrid_command(name="skip", with_app_command=True)
 async def skip(ctx):
     interaction = ctx.interaction
-    if ctx.channel.name == "bot-commands":
+    if ctx.channel.name == CHANNEL:
         if ctx.guild.voice_client and ctx.guild.voice_client.is_connected() and ctx.guild.voice_client.is_playing():
             ctx.guild.voice_client.stop()
             await send_message(ctx, interaction, f'Skipping: "{now_playing[0]}".')
@@ -59,7 +59,7 @@ async def skip(ctx):
 @bot.hybrid_command(name="clear", with_app_command=True)
 async def clear(ctx):
     interaction = ctx.interaction
-    if ctx.channel.name == "bot-commands":
+    if ctx.channel.name == CHANNEL:
         if song_queue.empty():
             if ctx.guild.voice_client and ctx.guild.voice_client.is_connected() and ctx.guild.voice_client.is_playing():
                 ctx.guild.voice_client.stop()
@@ -78,7 +78,7 @@ async def clear(ctx):
 @bot.hybrid_command(name="queue", with_app_command=True)
 async def queue(ctx):
     interaction = ctx.interaction
-    if ctx.channel.name == "bot-commands":
+    if ctx.channel.name == CHANNEL:
         if song_queue.empty():
             if now_playing[0] != None:
                 await send_message(ctx, interaction, f"1: {now_playing[0]} [NOW PLAYING]")
