@@ -1,6 +1,7 @@
 import discord
 from discord.ext import commands
 import logging
+
 from config import DISCORD_TOKEN, COMMAND_PREFIX
 from commands import MusicCommands
 

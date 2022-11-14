@@ -11,7 +11,7 @@ def check(author):
         if message.author == author:
             try:
                 number = int(message.content)
-                if number > 0 and number <= 5:
+                if number > 0 and number <= 10:
                     return True
             except:
                 pass
