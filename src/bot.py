@@ -5,8 +5,7 @@ import asyncio
 import logging
 
 from config import DISCORD_TOKEN
-from command_tree import setup 
-from util import send_message, song_handler
+from util import send_message, play_handler
 
 song_queue = asyncio.Queue()
 queue_lock = asyncio.Lock()
@@ -16,48 +15,24 @@ bot = commands.Bot(command_prefix="=", intents= discord.Intents.all())
 
 @bot.event
 async def on_ready():
-    await setup(bot, play, stop, skip, queue, leave, clear, feelinglucky, fl)
+    await bot.tree.sync()
     logging.getLogger('discord.commands').info("Command tree synced.")
 
-@bot.command()
-async def play(ctx, *, query=None, interaction=None, feeling_lucky=False):
-    if not (ctx.channel.name == "bot-commands" or ctx.channel.name == "moderator-only"):
-        return
+@bot.hybrid_command(name="play", with_app_command=True)
+async def play(ctx, *, query):
+    await play_handler(ctx, query, bot, song_queue, now_playing, queue_lock)
 
-    voice = discord.utils.get(bot.voice_clients, guild=ctx.guild)
+@bot.hybrid_command(name="feelinglucky", with_app_command=True)
+async def feelinglucky(ctx, *, query):
+    await play_handler(ctx, query, bot, song_queue, now_playing, queue_lock, feeling_lucky=True)
 
+@bot.hybrid_command(name="fl", with_app_command=True)
+async def fl(ctx, *, query):
+    await play_handler(ctx, query, bot, song_queue, now_playing, queue_lock, feeling_lucky=True)
 
-    response, title = await song_handler(ctx, interaction, query, song_queue, now_playing, voice, queue_lock, bot, feeling_lucky)
-
-
-    if ctx.channel.name == "moderator-only":
-        logging.getLogger('discord.commands').info(f"{ctx.message.author}: {query}")
-        if interaction == None: 
-            await ctx.message.delete()
-            return
-
-    if response == -1:
-        return
-    if response == 1:
-        interaction = None
-
-    if query == None and song_queue.empty():
-        await send_message(ctx, interaction, f"Queue is empty, please input a song.")
-    elif not (voice and voice.is_connected() and voice.is_playing()):
-        await send_message(ctx, interaction, f'Now playing: "{now_playing[0]}".')
-    else:
-        await send_message(ctx, interaction, f'Queued: "{title}".')
-
-@bot.command()
-async def feelinglucky(ctx, *, query=None, interaction=None):
-    await play(ctx, query=query, interaction=interaction, feeling_lucky=True)
-
-@bot.command()
-async def fl(ctx, *, query=None, interaction=None):
-    await play(ctx, query=query, interaction=interaction, feeling_lucky=True)
-
-@bot.command()
-async def stop(ctx, interaction=None):
+@bot.hybrid_command(name="stop", with_app_command=True)
+async def stop(ctx):
+    interaction = ctx.interaction
     if ctx.channel.name == "bot-commands":
         if ctx.guild.voice_client and ctx.guild.voice_client.is_connected() and ctx.guild.voice_client.is_playing():
             await send_message(ctx, interaction, f'Stopping.')
@@ -66,12 +41,13 @@ async def stop(ctx, interaction=None):
         else:
             await send_message(ctx, interaction, f"I'm not playing anything.")
 
-@bot.command()
-async def leave(ctx, interaction=None):
-    stop(ctx, interaction)
+@bot.hybrid_command(name="leave", with_app_command=True)
+async def leave(ctx):
+    stop(ctx)
 
-@bot.command()
-async def skip(ctx, interaction=None):
+@bot.hybrid_command(name="skip", with_app_command=True)
+async def skip(ctx):
+    interaction = ctx.interaction
     if ctx.channel.name == "bot-commands":
         if ctx.guild.voice_client and ctx.guild.voice_client.is_connected() and ctx.guild.voice_client.is_playing():
             ctx.guild.voice_client.stop()
@@ -80,8 +56,9 @@ async def skip(ctx, interaction=None):
             await send_message(ctx, interaction, f"I'm not playing anything.")
 
 
-@bot.command()
-async def clear(ctx, interaction=None):
+@bot.hybrid_command(name="clear", with_app_command=True)
+async def clear(ctx):
+    interaction = ctx.interaction
     if ctx.channel.name == "bot-commands":
         if song_queue.empty():
             if ctx.guild.voice_client and ctx.guild.voice_client.is_connected() and ctx.guild.voice_client.is_playing():
@@ -98,8 +75,9 @@ async def clear(ctx, interaction=None):
             
             await send_message(ctx, interaction, "Queue cleared.")
     
-@bot.command()
-async def queue(ctx, interaction=None):
+@bot.hybrid_command(name="queue", with_app_command=True)
+async def queue(ctx):
+    interaction = ctx.interaction
     if ctx.channel.name == "bot-commands":
         if song_queue.empty():
             if now_playing[0] != None:

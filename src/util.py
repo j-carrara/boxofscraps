@@ -4,6 +4,7 @@ import requests
 from config import FFMPEG_OPTS, FFMPEG_PATH
 import asyncio
 import discord
+import logging
 
 def check(author):
     def inner_check(message):
@@ -102,3 +103,33 @@ async def song_handler(ctx, interaction, query, song_queue, now_playing, voice, 
         channel.play(discord.FFmpegPCMAudio(source, **FFMPEG_OPTS, executable=FFMPEG_PATH), after= lambda e: asyncio.run_coroutine_threadsafe(queue_handler(bot, ctx, channel, song_queue, queue_lock, now_playing), bot.loop))
 
     return (result, title)
+
+async def play_handler(ctx, query, bot, song_queue, now_playing, queue_lock, feeling_lucky=False):
+    interaction = ctx.interaction
+
+    if not (ctx.channel.name == "bot-commands" or ctx.channel.name == "moderator-only"):
+        return
+
+    voice = discord.utils.get(bot.voice_clients, guild=ctx.guild)
+
+
+    response, title = await song_handler(ctx, interaction, query, song_queue, now_playing, voice, queue_lock, bot, feeling_lucky)
+
+
+    if ctx.channel.name == "moderator-only":
+        logging.getLogger('discord.commands').info(f"{ctx.message.author}: {query}")
+        if interaction == None: 
+            await ctx.message.delete()
+            return
+
+    if response == -1:
+        return
+    if response == 1:
+        interaction = None
+
+    if query == None and song_queue.empty():
+        await send_message(ctx, interaction, f"Queue is empty, please input a song.")
+    elif not (voice and voice.is_connected() and voice.is_playing()):
+        await send_message(ctx, interaction, f'Now playing: "{now_playing[0]}".')
+    else:
+        await send_message(ctx, interaction, f'Queued: "{title}".')
