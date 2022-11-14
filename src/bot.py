@@ -27,7 +27,7 @@ async def play(ctx, *, query=None, interaction=None, feeling_lucky=False):
     voice = discord.utils.get(bot.voice_clients, guild=ctx.guild)
 
 
-    response = await song_handler(ctx, interaction, query, song_queue, now_playing, voice, queue_lock, bot, feeling_lucky)
+    response, title = await song_handler(ctx, interaction, query, song_queue, now_playing, voice, queue_lock, bot, feeling_lucky)
 
 
     if ctx.channel.name == "moderator-only":
@@ -46,7 +46,7 @@ async def play(ctx, *, query=None, interaction=None, feeling_lucky=False):
     elif not (voice and voice.is_connected() and voice.is_playing()):
         await send_message(ctx, interaction, f'Now playing: "{now_playing[0]}".')
     else:
-        await send_message(ctx, interaction, f'Queued: "{response["title"]}".')
+        await send_message(ctx, interaction, f'Queued: "{title}".')
 
 @bot.command()
 async def feelinglucky(ctx, *, query=None, interaction=None):

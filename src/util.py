@@ -77,12 +77,12 @@ async def queue_handler(bot, ctx, channel, song_queue, queue_lock, now_playing):
 
 async def song_handler(ctx, interaction, query, song_queue, now_playing, voice, queue_lock, bot, feeling_lucky):
     if query == None and song_queue.empty():
-        return True
+        return (-2, None)
 
     if query != None:
         video, source, result = await search(ctx, interaction, bot, query, feeling_lucky)
         if result == -1:
-            return result
+            return (result, None)
         title = video['title']
     else:
         title = None
@@ -101,4 +101,4 @@ async def song_handler(ctx, interaction, query, song_queue, now_playing, voice, 
         channel = await join(ctx, voice)
         channel.play(discord.FFmpegPCMAudio(source, **FFMPEG_OPTS, executable=FFMPEG_PATH), after= lambda e: asyncio.run_coroutine_threadsafe(queue_handler(bot, ctx, channel, song_queue, queue_lock, now_playing), bot.loop))
 
-    return result
+    return (result, title)
