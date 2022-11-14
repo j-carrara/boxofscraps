@@ -11,19 +11,19 @@ class MusicCommands(commands.Cog):
         self.now_playing = [None]
 
 
-    @commands.hybrid_command(name="play", with_app_command=True)
-    async def play(self, ctx, *, query):
-        await play_handler(ctx, query, self.bot, self.song_queue, self.now_playing, self.queue_lock)
+    @commands.hybrid_command(name="play", with_app_command=True, description="Search for/link a Youtube video to play in voice.")
+    async def play(self, ctx, *, search_or_link):
+        await play_handler(ctx, search_or_link, self.bot, self.song_queue, self.now_playing, self.queue_lock)
 
-    @commands.hybrid_command(name="feelinglucky", with_app_command=True)
-    async def feelinglucky(self, ctx, *, query):
-        await play_handler(ctx, query, self.bot, self.song_queue, self.now_playing, self.queue_lock, feeling_lucky=True)
+    @commands.hybrid_command(name="feelinglucky", with_app_command=True, description="Play the first result of a Youtube search in voice.")
+    async def feelinglucky(self, ctx, *, search):
+        await play_handler(ctx, search, self.bot, self.song_queue, self.now_playing, self.queue_lock, feeling_lucky=True)
 
-    @commands.hybrid_command(name="fl", with_app_command=True)
-    async def fl(self, ctx, *, query):
-        await play_handler(ctx, query, self.bot, self.song_queue, self.now_playing, self.queue_lock, feeling_lucky=True)
+    @commands.hybrid_command(name="fl", with_app_command=True, description="Play the first result of a Youtube search in voice.")
+    async def fl(self, ctx, *, search):
+        await play_handler(ctx, search, self.bot, self.song_queue, self.now_playing, self.queue_lock, feeling_lucky=True)
 
-    @commands.hybrid_command(name="stop", with_app_command=True)
+    @commands.hybrid_command(name="stop", with_app_command=True, description="Ends the current song and leaves.")
     async def stop(self, ctx):
         interaction = ctx.interaction
         if ctx.channel.name == CHANNEL:
@@ -34,11 +34,11 @@ class MusicCommands(commands.Cog):
             else:
                 await send_message(ctx, interaction, f"I'm not playing anything.")
 
-    @commands.hybrid_command(name="leave", with_app_command=True)
+    @commands.hybrid_command(name="leave", with_app_command=True, description="Ends the current song and leaves.")
     async def leave(self, ctx):
         self.stop(ctx)
 
-    @commands.hybrid_command(name="skip", with_app_command=True)
+    @commands.hybrid_command(name="skip", with_app_command=True, description="Skips the current song.")
     async def skip(self, ctx):
         interaction = ctx.interaction
         if ctx.channel.name == CHANNEL:
@@ -49,7 +49,7 @@ class MusicCommands(commands.Cog):
                 await send_message(ctx, interaction, f"I'm not playing anything.")
 
 
-    @commands.hybrid_command(name="clear", with_app_command=True)
+    @commands.hybrid_command(name="clear", with_app_command=True, description="Empties the song queue.")
     async def clear(self, ctx):
         interaction = ctx.interaction
         if ctx.channel.name == CHANNEL:
@@ -68,7 +68,7 @@ class MusicCommands(commands.Cog):
                 
                 await send_message(ctx, interaction, "Queue cleared.")
         
-    @commands.hybrid_command(name="queue", with_app_command=True)
+    @commands.hybrid_command(name="queue", with_app_command=True, description="Displays the current queue.")
     async def queue(self, ctx):
         interaction = ctx.interaction
         if ctx.channel.name == CHANNEL:

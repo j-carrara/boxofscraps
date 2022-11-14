@@ -4,7 +4,6 @@ import logging
 from config import DISCORD_TOKEN, COMMAND_PREFIX
 from commands import MusicCommands
 
-
 bot = commands.Bot(command_prefix=COMMAND_PREFIX, intents= discord.Intents.all())
 
 @bot.event
