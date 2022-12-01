@@ -89,3 +89,7 @@ class MusicCommands(commands.Cog):
                     await send_message(ctx, interaction, output)
                     for song in song_list:
                         await self.song_queue.put(song)
+
+    @commands.hybrid_command(name="gnome", with_app_command=True, description="Hoo!")
+    async def gnome(self, ctx):
+        await self.feelinglucky(ctx, search="fastest gnome in the west")
