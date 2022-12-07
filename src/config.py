@@ -2,7 +2,7 @@ from platform import system
 from discord.opus import load_opus
 
 # Your Discord application token
-DISCORD_TOKEN = '***REMOVED***'
+DISCORD_TOKEN = 'YOUR TOKEN HERE'
 
 # FFMPEG library required, make sure to include path for whatever environment you run the bot on.
 FFMPEG_LINUX_PATH = '/usr/local/bin/ffmpeg/ffmpeg-5.1.1-amd64-static/ffmpeg' 
