@@ -28,11 +28,11 @@ class MusicCommands(commands.Cog):
         interaction = ctx.interaction
         if ctx.channel.name == CHANNEL:
             if ctx.guild.voice_client and ctx.guild.voice_client.is_connected() and ctx.guild.voice_client.is_playing():
-                await send_message(ctx, interaction, f'Stopping.')
+                await send_message(ctx, interaction, f'Stopping.', False)
                 self.now_playing[0] = None
                 await ctx.guild.voice_client.disconnect()
             else:
-                await send_message(ctx, interaction, f"I'm not playing anything.")
+                await send_message(ctx, interaction, f"I'm not playing anything.", False)
 
     @commands.hybrid_command(name="leave", with_app_command=True, description="Ends the current song and leaves.")
     async def leave(self, ctx):
@@ -44,9 +44,9 @@ class MusicCommands(commands.Cog):
         if ctx.channel.name == CHANNEL:
             if ctx.guild.voice_client and ctx.guild.voice_client.is_connected() and ctx.guild.voice_client.is_playing():
                 ctx.guild.voice_client.stop()
-                await send_message(ctx, interaction, f'Skipping: "{self.now_playing[0]}".')
+                await send_message(ctx, interaction, f'Skipping: "{self.now_playing[0]}".', False)
             else:
-                await send_message(ctx, interaction, f"I'm not playing anything.")
+                await send_message(ctx, interaction, f"I'm not playing anything.", False)
 
 
     @commands.hybrid_command(name="clear", with_app_command=True, description="Empties the song queue.")
@@ -56,9 +56,9 @@ class MusicCommands(commands.Cog):
             if self.song_queue.empty():
                 if ctx.guild.voice_client and ctx.guild.voice_client.is_connected() and ctx.guild.voice_client.is_playing():
                     ctx.guild.voice_client.stop()
-                    await send_message(ctx, interaction, "Queue cleared.")
+                    await send_message(ctx, interaction, "Queue cleared.", False)
                 else:
-                    await send_message(ctx, interaction, "Queue already empty.")
+                    await send_message(ctx, interaction, "Queue already empty.", False)
             else:
                 async with self.queue_lock:
                     for _ in range(self.song_queue.qsize()):
@@ -66,7 +66,7 @@ class MusicCommands(commands.Cog):
                     if ctx.guild.voice_client and ctx.guild.voice_client.is_connected() and ctx.guild.voice_client.is_playing():
                         ctx.guild.voice_client.stop()
                 
-                await send_message(ctx, interaction, "Queue cleared.")
+                await send_message(ctx, interaction, "Queue cleared.", False)
         
     @commands.hybrid_command(name="queue", with_app_command=True, description="Displays the current queue.")
     async def queue(self, ctx):
@@ -74,9 +74,9 @@ class MusicCommands(commands.Cog):
         if ctx.channel.name == CHANNEL:
             if self.song_queue.empty():
                 if self.now_playing[0] != None:
-                    await send_message(ctx, interaction, f"1: {self.now_playing[0]} [NOW PLAYING]")
+                    await send_message(ctx, interaction, f"1: {self.now_playing[0]} [NOW PLAYING]", False)
                 else:
-                    await send_message(ctx, interaction, "Queue is empty.")
+                    await send_message(ctx, interaction, "Queue is empty.", False)
             else:
                 async with self.queue_lock:
                     song_list = []
@@ -86,7 +86,7 @@ class MusicCommands(commands.Cog):
                     if self.now_playing[0] != None:
                         output.insert(0, f"{self.now_playing[0]} [NOW PLAYING]")
                     output = '\n'.join([f"{i+1}: {v}" for i, v in enumerate(output)])
-                    await send_message(ctx, interaction, output)
+                    await send_message(ctx, interaction, output, False)
                     for song in song_list:
                         await self.song_queue.put(song)
 

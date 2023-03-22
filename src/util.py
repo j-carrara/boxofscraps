@@ -1,4 +1,4 @@
-from youtube_dl import YoutubeDL
+from yt_dlp import YoutubeDL
 from youtube_search import YoutubeSearch
 import requests
 from config import FFMPEG_OPTS, FFMPEG_PATH, CHANNEL, ADMIN_CHANNEL
@@ -23,24 +23,40 @@ async def search(ctx, interaction, bot, query, feeling_lucky=False):
         try: requests.get(query)
         except: 
             if feeling_lucky:
+                if ctx.channel.name == ADMIN_CHANNEL:
+                    await interaction.response.defer(thinking=True, ephemeral=True)
+                else:
+                    await interaction.response.defer(thinking=True)
                 result = 0
-                response = ydl.extract_info(f"ytsearch:{query}", download=False)['entries']
+                try:
+                    response = ydl.extract_info(f"ytsearch:{query}", download=False)['entries']
+                except:
+                    return (None, None, -1)
                 info = response[0]
             else:
                 result = 1
                 results = YoutubeSearch(query, max_results=10).to_dict()
-                await send_message(ctx, interaction, f"**Choose a video by number:**\n```"+'\n'.join([f'{i+1: >4}: {video["title"]}' for i, video in enumerate(results)])+"```")
+                await send_message(ctx, interaction, f"**Choose a video by number:**\n```"+'\n'.join([f'{i+1: >4}: {video["title"]}' for i, video in enumerate(results)])+"```", False)
                 try:
                     msg = await bot.wait_for('message', check=check(ctx.author), timeout=15)
                 except:
-                    await send_message(ctx, None, "Timed out.")
+                    await send_message(ctx, None, "Timed out.", False)
                     return (None, None, -1)
                 selection = int(msg.content)
-                info = ydl.extract_info(f"https://youtube.com{results[selection-1]['url_suffix']}",download=False)
+                try:
+                    info = ydl.extract_info(f"https://youtube.com{results[selection-1]['url_suffix']}",download=False)
+                except:
+                    return (None, None, -1)
         else: 
             result = 0
             info = ydl.extract_info(query, download=False)
-    return (info, info['formats'][0]['url'], result)
+            
+    for format in info['formats']:
+        if format['acodec'] != 'none':
+            audio_source = format['url']
+            break
+
+    return (info, audio_source, result)
 
 async def join(ctx, voice):
     if ctx.channel.name == ADMIN_CHANNEL:
@@ -54,12 +70,15 @@ async def join(ctx, voice):
 
     return voice
 
-async def send_message(ctx, interaction, message):
+async def send_message(ctx, interaction, message, thinking):
     if interaction != None:
-        if ctx.channel.name == ADMIN_CHANNEL:
-            await interaction.response.send_message(message, ephemeral=True)
+        if thinking:
+            await interaction.followup.send(message)
         else:
-            await interaction.response.send_message(message)
+            if ctx.channel.name == ADMIN_CHANNEL:
+                await interaction.response.send_message(message, ephemeral=True)
+            else:
+                await interaction.response.send_message(message)
     else:
         await ctx.channel.send(message)
 
@@ -122,14 +141,16 @@ async def play_handler(ctx, query, bot, song_queue, now_playing, queue_lock, fee
             await ctx.message.delete()
             return
 
-    if response == -1:
-        return
-    if response == 1:
+    if not feeling_lucky:
         interaction = None
+    
+    if response == -1:
+        await send_message(ctx, interaction, f"Error downloading specified video.", feeling_lucky)
+        return
 
     if query == None and song_queue.empty():
-        await send_message(ctx, interaction, f"Queue is empty, please input a song.")
+        await send_message(ctx, interaction, f"Queue is empty, please input a song.", feeling_lucky)
     elif not (voice and voice.is_connected() and voice.is_playing()):
-        await send_message(ctx, interaction, f'Now playing: "{now_playing[0]}".')
+        await send_message(ctx, interaction, f'Now playing: "{now_playing[0]}".', feeling_lucky)
     else:
-        await send_message(ctx, interaction, f'Queued: "{title}".')
+        await send_message(ctx, interaction, f'Queued: "{title}".', feeling_lucky)
