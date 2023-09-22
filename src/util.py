@@ -52,7 +52,7 @@ async def search(ctx, interaction, bot, query, feeling_lucky=False):
             info = ydl.extract_info(query, download=False)
             
     for format in info['formats']:
-        if format['acodec'] != 'none':
+        if 'acodec' in format and format['acodec'] != 'none':
             audio_source = format['url']
             break
 
