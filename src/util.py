@@ -36,7 +36,7 @@ async def search(ctx, interaction, bot, query, feeling_lucky=False):
             else:
                 result = 1
                 results = YoutubeSearch(query, max_results=10).to_dict()
-                await send_message(ctx, interaction, f"**Choose a video by number:**\n```"+'\n'.join([f'{i+1: >4}: {video["title"]}' for i, video in enumerate(results)])+"```", False)
+                await send_message(ctx, interaction, f"**Choose a video by number:**\n```"+'\n'.join([f'{i+1: >4}: {video["title"]} ({video["duration"]})' for i, video in enumerate(results)])+"```", False)
                 try:
                     msg = await bot.wait_for('message', check=check(ctx.author), timeout=15)
                 except:
